@@ -6,56 +6,46 @@ import org.greenrobot.greendao.annotation.JoinEntity;
 import org.greenrobot.greendao.annotation.NotNull;
 import org.greenrobot.greendao.annotation.ToMany;
 
-import java.util.Date;
 import java.util.List;
 import org.greenrobot.greendao.annotation.Generated;
 import org.greenrobot.greendao.DaoException;
 
 @Entity
-public class Course {
+public class Student {
     @Id
     private Long id;
 
     @NotNull
     private String name;
 
-    private Date startDate;
-
-    private Date endDate;
-
-    private String room;
-
-    private Long instructorId;
+    @NotNull
+    private String sex;
 
     @ToMany
     @JoinEntity(
             entity = JoinStudentWithCourse.class,
-            sourceProperty = "courseId",
-            targetProperty = "studentId"
+            sourceProperty = "studentId",
+            targetProperty = "courseId"
     )
-    private List<Student> students;
+    private List<Course> attendantCourses;
 
     /** Used to resolve relations */
     @Generated(hash = 2040040024)
     private transient DaoSession daoSession;
 
     /** Used for active entity operations. */
-    @Generated(hash = 2063667503)
-    private transient CourseDao myDao;
+    @Generated(hash = 1943931642)
+    private transient StudentDao myDao;
 
-    @Generated(hash = 1637002947)
-    public Course(Long id, @NotNull String name, Date startDate, Date endDate,
-            String room, Long instructorId) {
+    @Generated(hash = 1485814660)
+    public Student(Long id, @NotNull String name, @NotNull String sex) {
         this.id = id;
         this.name = name;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.room = room;
-        this.instructorId = instructorId;
+        this.sex = sex;
     }
 
-    @Generated(hash = 1355838961)
-    public Course() {
+    @Generated(hash = 1556870573)
+    public Student() {
     }
 
     public Long getId() {
@@ -74,64 +64,41 @@ public class Course {
         this.name = name;
     }
 
-    public Date getStartDate() {
-        return this.startDate;
+    public String getSex() {
+        return this.sex;
     }
 
-    public void setStartDate(Date startDate) {
-        this.startDate = startDate;
-    }
-
-    public Date getEndDate() {
-        return this.endDate;
-    }
-
-    public void setEndDate(Date endDate) {
-        this.endDate = endDate;
-    }
-
-    public String getRoom() {
-        return this.room;
-    }
-
-    public void setRoom(String room) {
-        this.room = room;
-    }
-
-    public Long getInstructorId() {
-        return this.instructorId;
-    }
-
-    public void setInstructorId(Long instructorId) {
-        this.instructorId = instructorId;
+    public void setSex(String sex) {
+        this.sex = sex;
     }
 
     /**
      * To-many relationship, resolved on first access (and after reset).
      * Changes to to-many relations are not persisted, make changes to the target entity.
      */
-    @Generated(hash = 1555632920)
-    public List<Student> getStudents() {
-        if (students == null) {
+    @Generated(hash = 426929462)
+    public List<Course> getAttendantCourses() {
+        if (attendantCourses == null) {
             final DaoSession daoSession = this.daoSession;
             if (daoSession == null) {
                 throw new DaoException("Entity is detached from DAO context");
             }
-            StudentDao targetDao = daoSession.getStudentDao();
-            List<Student> studentsNew = targetDao._queryCourse_Students(id);
+            CourseDao targetDao = daoSession.getCourseDao();
+            List<Course> attendantCoursesNew = targetDao
+                    ._queryStudent_AttendantCourses(id);
             synchronized (this) {
-                if (students == null) {
-                    students = studentsNew;
+                if (attendantCourses == null) {
+                    attendantCourses = attendantCoursesNew;
                 }
             }
         }
-        return students;
+        return attendantCourses;
     }
 
     /** Resets a to-many relationship, making the next get call to query for a fresh result. */
-    @Generated(hash = 238993120)
-    public synchronized void resetStudents() {
-        students = null;
+    @Generated(hash = 1100538593)
+    public synchronized void resetAttendantCourses() {
+        attendantCourses = null;
     }
 
     /**
@@ -171,9 +138,9 @@ public class Course {
     }
 
     /** called by internal mechanisms, do not call yourself. */
-    @Generated(hash = 94420068)
+    @Generated(hash = 1701634981)
     public void __setDaoSession(DaoSession daoSession) {
         this.daoSession = daoSession;
-        myDao = daoSession != null ? daoSession.getCourseDao() : null;
+        myDao = daoSession != null ? daoSession.getStudentDao() : null;
     }
 }

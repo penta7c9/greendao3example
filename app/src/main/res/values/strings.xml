@@ -3,4 +3,7 @@
     <string name="title_course">Course</string>
     <string name="title_teacher">Teacher</string>
     <string name="title_student">Student</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
