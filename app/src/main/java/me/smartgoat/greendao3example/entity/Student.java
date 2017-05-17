@@ -19,7 +19,7 @@ public class Student {
     private String name;
 
     @NotNull
-    private String sex;
+    private boolean sex;
 
     @ToMany
     @JoinEntity(
@@ -37,8 +37,8 @@ public class Student {
     @Generated(hash = 1943931642)
     private transient StudentDao myDao;
 
-    @Generated(hash = 1485814660)
-    public Student(Long id, @NotNull String name, @NotNull String sex) {
+    @Generated(hash = 1532282766)
+    public Student(Long id, @NotNull String name, boolean sex) {
         this.id = id;
         this.name = name;
         this.sex = sex;
@@ -64,11 +64,11 @@ public class Student {
         this.name = name;
     }
 
-    public String getSex() {
+    public boolean getSex() {
         return this.sex;
     }
 
-    public void setSex(String sex) {
+    public void setSex(boolean sex) {
         this.sex = sex;
     }
 
@@ -143,4 +143,5 @@ public class Student {
         this.daoSession = daoSession;
         myDao = daoSession != null ? daoSession.getStudentDao() : null;
     }
+
 }
