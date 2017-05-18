@@ -4,6 +4,7 @@ package layout;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.annotation.LayoutRes;
 import android.support.annotation.NonNull;
@@ -132,12 +133,11 @@ public class StudentFragment extends Fragment {
                 StudentDao studentDao = mDaoSession.getStudentDao();
                 List<Student> students = studentDao.queryBuilder().list();
                 ListResultAdapter adapter = new ListResultAdapter(
-                        getActivity(), R.layout.student_list_item, students);
+                        getActivity(), R.layout.shared_list_item, students);
                 listResult.setAdapter(adapter);
             }
         });
 
-        listResult.setClickable(true);
         listResult.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -176,14 +176,34 @@ public class StudentFragment extends Fragment {
 
             if (convertView == null) {
                 convertView = LayoutInflater.from(getContext()).inflate(
-                        R.layout.student_list_item, parent, false);
+                        R.layout.shared_list_item, parent, false);
             }
 
             TextView txtID = (TextView) convertView.findViewById(R.id.txt_id);
             TextView txtName = (TextView) convertView.findViewById(R.id.txt_name);
+            final Button btnDelete = (Button) convertView.findViewById(R.id.btn_delete);
 
             txtID.setText(student.getId().toString());
             txtName.setText(student.getName() + " (" + (student.getSex() ? "Male" : "Female") + ")");
+            btnDelete.setTag(student);
+            btnDelete.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    new AlertDialog.Builder(getActivity())
+                            .setMessage("Are you sure you want to delete this student?")
+                            .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    Student stu = (Student) btnDelete.getTag();
+                                    stu.delete();
+                                    remove(stu);
+                                    notifyDataSetChanged();
+                                }
+                            })
+                            .setNegativeButton("No", null)
+                            .show();
+                }
+            });
 
             return convertView;
         }

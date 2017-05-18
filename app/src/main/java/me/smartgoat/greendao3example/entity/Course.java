@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.List;
 import org.greenrobot.greendao.annotation.Generated;
 import org.greenrobot.greendao.DaoException;
+import org.greenrobot.greendao.annotation.ToOne;
 
 @Entity
 public class Course {
@@ -27,6 +28,9 @@ public class Course {
 
     private Long instructorId;
 
+    @ToOne(joinProperty = "instructorId")
+    private Instructor instructor;
+
     @ToMany
     @JoinEntity(
             entity = JoinStudentWithCourse.class,
@@ -42,6 +46,9 @@ public class Course {
     /** Used for active entity operations. */
     @Generated(hash = 2063667503)
     private transient CourseDao myDao;
+
+    @Generated(hash = 1731742807)
+    private transient Long instructor__resolvedKey;
 
     @Generated(hash = 1637002947)
     public Course(Long id, @NotNull String name, Date startDate, Date endDate,
@@ -168,6 +175,35 @@ public class Course {
             throw new DaoException("Entity is detached from DAO context");
         }
         myDao.update(this);
+    }
+
+    /** To-one relationship, resolved on first access. */
+    @Generated(hash = 604667510)
+    public Instructor getInstructor() {
+        Long __key = this.instructorId;
+        if (instructor__resolvedKey == null || !instructor__resolvedKey.equals(__key)) {
+            final DaoSession daoSession = this.daoSession;
+            if (daoSession == null) {
+                throw new DaoException("Entity is detached from DAO context");
+            }
+            InstructorDao targetDao = daoSession.getInstructorDao();
+            Instructor instructorNew = targetDao.load(__key);
+            synchronized (this) {
+                instructor = instructorNew;
+                instructor__resolvedKey = __key;
+            }
+        }
+        return instructor;
+    }
+
+    /** called by internal mechanisms, do not call yourself. */
+    @Generated(hash = 924339613)
+    public void setInstructor(Instructor instructor) {
+        synchronized (this) {
+            this.instructor = instructor;
+            instructorId = instructor == null ? null : instructor.getId();
+            instructor__resolvedKey = instructorId;
+        }
     }
 
     /** called by internal mechanisms, do not call yourself. */

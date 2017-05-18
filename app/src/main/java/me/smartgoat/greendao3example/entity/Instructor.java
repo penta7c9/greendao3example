@@ -22,6 +22,10 @@ public class Instructor {
     @ToMany(referencedJoinProperty = "instructorId")
     private List<Course> courses;
 
+    public String getDisplayName() {
+        return title + " " + name;
+    }
+
     /** Used to resolve relations */
     @Generated(hash = 2040040024)
     private transient DaoSession daoSession;
