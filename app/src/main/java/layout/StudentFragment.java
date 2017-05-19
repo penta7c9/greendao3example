@@ -23,11 +23,16 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import me.smartgoat.greendao3example.App;
 import me.smartgoat.greendao3example.R;
+import me.smartgoat.greendao3example.entity.Course;
+import me.smartgoat.greendao3example.entity.CourseDao;
 import me.smartgoat.greendao3example.entity.DaoSession;
+import me.smartgoat.greendao3example.entity.JoinStudentWithCourse;
+import me.smartgoat.greendao3example.entity.JoinStudentWithCourseDao;
 import me.smartgoat.greendao3example.entity.Student;
 import me.smartgoat.greendao3example.entity.StudentDao;
 
@@ -46,6 +51,7 @@ public class StudentFragment extends Fragment {
     private DaoSession mDaoSession;
     private Student mCurrentStudent;
 
+    // btnAdd has 2 modes: Add and Update
     private boolean mIsUpdateMode;
 
     public StudentFragment() {
@@ -56,6 +62,12 @@ public class StudentFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mDaoSession = ((App) getActivity().getApplication()).getDaoSession();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        fillCourseSpinner();
     }
 
     @Override
@@ -83,6 +95,32 @@ public class StudentFragment extends Fragment {
     }
 
     private void setControlEventListener() {
+        // Enroll current student to the selected course.
+        btnEnroll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mCurrentStudent != null) {
+                    JoinStudentWithCourse jswc = new JoinStudentWithCourse();
+                    jswc.setStudentId(mCurrentStudent.getId());
+
+                    Course course = (Course) spinnerCourses.getSelectedItem();
+                    jswc.setCourseId(course.getId());
+
+                    JoinStudentWithCourseDao jswcDao = mDaoSession.getJoinStudentWithCourseDao();
+                    jswcDao.insert(jswc);
+
+                    // Need this for the enrollment takes effect
+                    mCurrentStudent.resetAttendantCourses();
+
+                    fillCourseSpinner();
+
+                    Toast.makeText(getActivity(), "Course enrolled", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        // Clear the form, the result list. Reset current instructor object.
+        // And change to Add mode.
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -95,6 +133,7 @@ public class StudentFragment extends Fragment {
             }
         });
 
+        // Validate and Add/Update student to database.
         btnAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -122,11 +161,14 @@ public class StudentFragment extends Fragment {
                         switchButtonMode(true);
                     }
 
+                    fillCourseSpinner();
+
                     Toast.makeText(getActivity(), toastMsg, Toast.LENGTH_SHORT).show();
                 }
             }
         });
 
+        // Search by name and show result in the result list.
         btnSearch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -138,6 +180,7 @@ public class StudentFragment extends Fragment {
             }
         });
 
+        // Fill the from with selected student's information.
         listResult.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -146,10 +189,12 @@ public class StudentFragment extends Fragment {
                 switchIsMale.setChecked(student.getSex());
                 mCurrentStudent = student;
                 switchButtonMode(true);
+                fillCourseSpinner();
             }
         });
     }
 
+    // Switch the mode of Add button
     private void switchButtonMode(boolean toUpdateMode) {
         mIsUpdateMode = toUpdateMode;
         if (mIsUpdateMode) {
@@ -161,42 +206,113 @@ public class StudentFragment extends Fragment {
         }
     }
 
+    // Fill the available course to the spinner.
+    // The enrolled course(s) will not be filled.
+    private void fillCourseSpinner() {
+        CourseDao courseDao = mDaoSession.getCourseDao();
+        List<Course> courses;
+        if (mCurrentStudent != null) {
+            List<Long> idList = new ArrayList<>();
+            for (Course c : mCurrentStudent.getAttendantCourses()) {
+                idList.add(c.getId());
+            }
+            courses = courseDao.queryBuilder().where(CourseDao.Properties.Id.notIn(idList)).list();
+        } else {
+            courses = courseDao.queryBuilder().list();
+        }
+        CourseSpinnerAdapter adapter = new CourseSpinnerAdapter(getActivity(), courses);
+        spinnerCourses.setAdapter(adapter);
+    }
+
+    private class CourseSpinnerAdapter extends ArrayAdapter<Course> {
+
+        CourseSpinnerAdapter(@NonNull Context context, @NonNull List<Course> courses) {
+            super(context, R.layout.spinner_item, R.id.text_content, courses);
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            Course course = getItem(position);
+
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext()).inflate(
+                        R.layout.spinner_item, parent, false);
+            }
+
+            TextView textView = (TextView) convertView.findViewById(R.id.text_content);
+            textView.setText(course.getName());
+
+            return textView;
+        }
+
+        @Override
+        public View getDropDownView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            Course course = getItem(position);
+
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext()).inflate(
+                        R.layout.spinner_item, parent, false);
+            }
+
+            TextView textView = (TextView) convertView.findViewById(R.id.text_content);
+            textView.setText(course.getName());
+
+            return convertView;
+        }
+    }
+
     private class ListResultAdapter extends ArrayAdapter<Student> {
 
-        public ListResultAdapter(@NonNull Context context,
-                                 @LayoutRes int resource,
-                                 @NonNull List<Student> objects) {
+        private TextView txtID;
+        private TextView txtName;
+        private Button btnShow;
+        private Button btnDelete;
+
+        ListResultAdapter(@NonNull Context context, @LayoutRes int resource, @NonNull List<Student> objects) {
             super(context, resource, objects);
         }
 
         @NonNull
         @Override
         public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-            Student student = getItem(position);
+            final Student student = getItem(position);
 
             if (convertView == null) {
                 convertView = LayoutInflater.from(getContext()).inflate(
                         R.layout.shared_list_item, parent, false);
             }
 
-            TextView txtID = (TextView) convertView.findViewById(R.id.txt_id);
-            TextView txtName = (TextView) convertView.findViewById(R.id.txt_name);
-            final Button btnDelete = (Button) convertView.findViewById(R.id.btn_delete);
+            txtID = (TextView) convertView.findViewById(R.id.txt_id);
+            txtName = (TextView) convertView.findViewById(R.id.txt_name);
+            btnShow = (Button) convertView.findViewById(R.id.btn_show);
+            btnDelete = (Button) convertView.findViewById(R.id.btn_delete);
 
             txtID.setText(student.getId().toString());
             txtName.setText(student.getName() + " (" + (student.getSex() ? "Male" : "Female") + ")");
+            btnShow.setTag(student);
             btnDelete.setTag(student);
+
+            setEventListener();
+
+            return convertView;
+        }
+
+        private void setEventListener() {
+            // Delete the student
             btnDelete.setOnClickListener(new View.OnClickListener() {
+                Student localStudent;
                 @Override
                 public void onClick(View v) {
+                    localStudent = (Student) v.getTag();
                     new AlertDialog.Builder(getActivity())
                             .setMessage("Are you sure you want to delete this student?")
                             .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
-                                    Student stu = (Student) btnDelete.getTag();
-                                    stu.delete();
-                                    remove(stu);
+                                    deleteCourseEnrollmentOf(localStudent);
+                                    localStudent.delete();
+                                    remove(localStudent);
                                     notifyDataSetChanged();
                                 }
                             })
@@ -205,7 +321,40 @@ public class StudentFragment extends Fragment {
                 }
             });
 
-            return convertView;
+            // Show enrolled courses of the student
+            btnShow.setOnClickListener(new View.OnClickListener() {
+                Student localStudent;
+                @Override
+                public void onClick(View v) {
+                    localStudent = (Student) v.getTag();
+                    List<Course> courses = localStudent.getAttendantCourses();
+                    if (courses.size() <= 0) {
+                        Toast.makeText(getActivity(), "No course to show", Toast.LENGTH_SHORT).show();
+                    } else {
+                        // Extract the course name
+                        List<String> courseNameList = new ArrayList<>();
+                        for (int i = 0; i < courses.size(); i++) {
+                            courseNameList.add(courses.get(i).getName());
+                        }
+
+                        // Populate the list and show it
+                        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                                getActivity(), android.R.layout.simple_list_item_1, courseNameList);
+                        ListView listView = new ListView(getActivity());
+                        listView.setAdapter(adapter);
+                        new AlertDialog.Builder(getActivity()).setView(listView).show();
+                    }
+                }
+            });
+        }
+
+        // Delete all record of the input student in join table
+        private void deleteCourseEnrollmentOf(Student student) {
+            JoinStudentWithCourseDao jswcDao = mDaoSession.getJoinStudentWithCourseDao();
+            List<JoinStudentWithCourse> toBeDeleteList = jswcDao.queryBuilder().where(
+                    JoinStudentWithCourseDao.Properties.StudentId.eq(student.getId()))
+                    .list();
+            jswcDao.deleteInTx(toBeDeleteList);
         }
     }
 }

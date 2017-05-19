@@ -24,6 +24,7 @@ import android.widget.Toast;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -36,6 +37,9 @@ import me.smartgoat.greendao3example.entity.CourseDao;
 import me.smartgoat.greendao3example.entity.DaoSession;
 import me.smartgoat.greendao3example.entity.Instructor;
 import me.smartgoat.greendao3example.entity.InstructorDao;
+import me.smartgoat.greendao3example.entity.JoinStudentWithCourse;
+import me.smartgoat.greendao3example.entity.JoinStudentWithCourseDao;
+import me.smartgoat.greendao3example.entity.Student;
 
 public class CourseFragment extends Fragment {
 
@@ -54,6 +58,7 @@ public class CourseFragment extends Fragment {
     private Course mCurrentCourse;
     private DaoSession mDaoSession;
 
+    // btnAdd has 2 modes: Add and Update
     private boolean mIsUpdateMode;
 
     public CourseFragment() {
@@ -62,7 +67,6 @@ public class CourseFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         mCalendar = Calendar.getInstance();
         mDaoSession = ((App) getActivity().getApplication()).getDaoSession();
     }
@@ -72,6 +76,7 @@ public class CourseFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_course, container, false);
 
+        // Find view elements
         txtCourseName = (EditText) view.findViewById(R.id.txt_course_name);
         txtCourseStart = (EditText) view.findViewById(R.id.txt_course_start);
         txtCourseEnd = (EditText) view.findViewById(R.id.txt_course_end);
@@ -94,6 +99,7 @@ public class CourseFragment extends Fragment {
     }
 
     private void setControlEventListener() {
+        // Show the calendar when user click on this field
         txtCourseStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -104,7 +110,7 @@ public class CourseFragment extends Fragment {
                         mCalendar.set(Calendar.YEAR, year);
                         mCalendar.set(Calendar.MONTH, monthOfYear);
                         mCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-                        updateText(txtCourseStart);
+                        txtCourseStart.setText(convertDateToString(mCalendar.getTime()));
                     }
 
                 };
@@ -115,6 +121,7 @@ public class CourseFragment extends Fragment {
             }
         });
 
+        // Show the calendar when user click on this field
         txtCourseEnd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -125,7 +132,7 @@ public class CourseFragment extends Fragment {
                         mCalendar.set(Calendar.YEAR, year);
                         mCalendar.set(Calendar.MONTH, monthOfYear);
                         mCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-                        updateText(txtCourseEnd);
+                        txtCourseEnd.setText(convertDateToString(mCalendar.getTime()));
                     }
 
                 };
@@ -136,6 +143,8 @@ public class CourseFragment extends Fragment {
             }
         });
 
+        // Clear the form, the result list. Reset current course object.
+        // And change to Add mode.
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -151,6 +160,7 @@ public class CourseFragment extends Fragment {
             }
         });
 
+        // Validate and Add/Update course to database.
         btnAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -188,17 +198,22 @@ public class CourseFragment extends Fragment {
             }
         });
 
+        // Search by name and show result in the result list.
         btnSearch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 CourseDao courseDao = mDaoSession.getCourseDao();
-                List<Course> courses = courseDao.queryBuilder().list();
+                List<Course> courses = courseDao.queryBuilder()
+                        .where(CourseDao.Properties.Name.like(
+                                "%" + txtCourseName.getText().toString() + "%"
+                        )).list();
                 ListResultAdapter adapter = new ListResultAdapter(
                         getActivity(), R.layout.course_list_item, courses);
                 listResult.setAdapter(adapter);
             }
         });
 
+        // Fill the from with selected course's information.
         listResult.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -208,7 +223,7 @@ public class CourseFragment extends Fragment {
                 txtCourseEnd.setText(convertDateToString(course.getEndDate()));
                 txtRoom.setText(course.getRoom());
 
-                InstructorSpinnerAdapter adapter = (InstructorSpinnerAdapter)spinnerInstructor.getAdapter();
+                InstructorSpinnerAdapter adapter = (InstructorSpinnerAdapter) spinnerInstructor.getAdapter();
                 int pos = adapter.getPosition(course.getInstructor());
                 spinnerInstructor.setSelection(pos);
 
@@ -224,10 +239,9 @@ public class CourseFragment extends Fragment {
     }
 
     private Date convertStringToDate(String input) {
-        SimpleDateFormat format = new SimpleDateFormat("dd/MM/yy");
+        SimpleDateFormat format = new SimpleDateFormat("dd/MM/yy", Locale.US);
         try {
-            Date date = format.parse(input);
-            return date;
+            return format.parse(input);
         } catch (ParseException e) {
             e.printStackTrace();
         }
@@ -235,10 +249,11 @@ public class CourseFragment extends Fragment {
     }
 
     private String convertDateToString(Date input) {
-        SimpleDateFormat format = new SimpleDateFormat("dd/MM/yy");
+        SimpleDateFormat format = new SimpleDateFormat("dd/MM/yy", Locale.US);
         return format.format(input);
     }
 
+    // Switch the mode of Add button
     private void switchButtonMode(boolean toUpdateMode) {
         mIsUpdateMode = toUpdateMode;
         if (mIsUpdateMode) {
@@ -248,12 +263,7 @@ public class CourseFragment extends Fragment {
         }
     }
 
-    private void updateText(EditText textField) {
-        String myFormat = "dd/MM/yy";
-        SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.US);
-        textField.setText(sdf.format(mCalendar.getTime()));
-    }
-
+    // Fill the spinner with available instructors
     private void fillInstructorSpinner() {
         InstructorDao instructorDao = mDaoSession.getInstructorDao();
         List<Instructor> instructors = instructorDao.queryBuilder().list();
@@ -263,8 +273,7 @@ public class CourseFragment extends Fragment {
 
     private class InstructorSpinnerAdapter extends ArrayAdapter<Instructor> {
 
-        public InstructorSpinnerAdapter(@NonNull Context context,
-                                        @NonNull List<Instructor> instructors) {
+        InstructorSpinnerAdapter(@NonNull Context context, @NonNull List<Instructor> instructors) {
             super(context, R.layout.spinner_item, R.id.text_content, instructors);
         }
 
@@ -305,11 +314,10 @@ public class CourseFragment extends Fragment {
         private TextView txtID;
         private TextView txtName;
         private TextView txtTime;
+        private Button btnShow;
         private Button btnDelete;
 
-        public ListResultAdapter(@NonNull Context context,
-                                 @LayoutRes int resource,
-                                 @NonNull List<Course> objects) {
+        ListResultAdapter(@NonNull Context context, @LayoutRes int resource, @NonNull List<Course> objects) {
             super(context, resource, objects);
         }
 
@@ -326,23 +334,36 @@ public class CourseFragment extends Fragment {
             txtID = (TextView) convertView.findViewById(R.id.txt_id);
             txtName = (TextView) convertView.findViewById(R.id.txt_name);
             txtTime = (TextView) convertView.findViewById(R.id.txt_time);
+            btnShow = (Button) convertView.findViewById(R.id.btn_show);
             btnDelete = (Button) convertView.findViewById(R.id.btn_delete);
 
             txtID.setText(course.getId().toString());
             txtName.setText(course.getName() + " - Room: " + course.getRoom());
             txtTime.setText(getCourseDuration(course.getStartDate(), course.getEndDate()));
+            btnShow.setTag(course);
             btnDelete.setTag(course);
+
+            setEventListener();
+
+            return convertView;
+        }
+
+        private void setEventListener() {
+            // Delete a course
             btnDelete.setOnClickListener(new View.OnClickListener() {
+                Course localCourse;
+
                 @Override
                 public void onClick(View v) {
+                    localCourse = (Course) v.getTag();
                     new AlertDialog.Builder(getActivity())
                             .setMessage("Are you sure you want to delete this course?")
                             .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
-                                    Course crs = (Course) btnDelete.getTag();
-                                    crs.delete();
-                                    remove(crs);
+                                    deleteCourseEnrollmentOf(localCourse);
+                                    localCourse.delete();
+                                    remove(localCourse);
                                     notifyDataSetChanged();
                                 }
                             })
@@ -351,11 +372,45 @@ public class CourseFragment extends Fragment {
                 }
             });
 
-            return convertView;
+            // Show enrolled student of the course
+            btnShow.setOnClickListener(new View.OnClickListener() {
+                Course localCourse;
+
+                @Override
+                public void onClick(View v) {
+                    localCourse = (Course) v.getTag();
+                    List<Student> students = localCourse.getStudents();
+                    if (students.size() <= 0) {
+                        Toast.makeText(getActivity(), "No student to show", Toast.LENGTH_SHORT).show();
+                    } else {
+                        // Extract the student name
+                        List<String> studentNameList = new ArrayList<>();
+                        for (int i = 0; i < students.size(); i++) {
+                            studentNameList.add(students.get(i).getName());
+                        }
+
+                        // Populate the list and show it
+                        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                                getActivity(), android.R.layout.simple_list_item_1, studentNameList);
+                        ListView listView = new ListView(getActivity());
+                        listView.setAdapter(adapter);
+                        new AlertDialog.Builder(getActivity()).setView(listView).show();
+                    }
+                }
+            });
         }
 
         private String getCourseDuration(Date start, Date end) {
             return convertDateToString(start) + " - " + convertDateToString(end);
+        }
+
+        // Delete all records of the input course in join table
+        private void deleteCourseEnrollmentOf(Course course) {
+            JoinStudentWithCourseDao jswcDao = mDaoSession.getJoinStudentWithCourseDao();
+            List<JoinStudentWithCourse> toBeDeleteList = jswcDao.queryBuilder().where(
+                    JoinStudentWithCourseDao.Properties.CourseId.eq(course.getId()))
+                    .list();
+            jswcDao.deleteInTx(toBeDeleteList);
         }
     }
 }

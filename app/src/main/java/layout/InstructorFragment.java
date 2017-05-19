@@ -16,10 +16,8 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,8 +31,6 @@ import me.smartgoat.greendao3example.entity.CourseDao;
 import me.smartgoat.greendao3example.entity.DaoSession;
 import me.smartgoat.greendao3example.entity.Instructor;
 import me.smartgoat.greendao3example.entity.InstructorDao;
-import me.smartgoat.greendao3example.entity.Student;
-import me.smartgoat.greendao3example.entity.StudentDao;
 
 public class InstructorFragment extends Fragment {
 
@@ -48,6 +44,7 @@ public class InstructorFragment extends Fragment {
     private Instructor mCurrentInstructor;
     private DaoSession mDaoSession;
 
+    // btnAdd has 2 modes: Add and Update
     private boolean mIsUpdateMode;
 
     public InstructorFragment() {
@@ -79,6 +76,8 @@ public class InstructorFragment extends Fragment {
     }
 
     private void setControlEventListener() {
+        // Clear the form, the result list. Reset current instructor object.
+        // And change to Add mode.
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -91,6 +90,7 @@ public class InstructorFragment extends Fragment {
             }
         });
 
+        // Validate and Add/Update instructor to database.
         btnAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -123,17 +123,22 @@ public class InstructorFragment extends Fragment {
             }
         });
 
+        // Search by name and show result in the result list.
         btnSearch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 InstructorDao instructorDao = mDaoSession.getInstructorDao();
-                List<Instructor> instructors = instructorDao.queryBuilder().list();
+                List<Instructor> instructors = instructorDao.queryBuilder()
+                        .where(InstructorDao.Properties.Name.like(
+                                "%" + txtInstructorName.getText().toString() + "%"
+                        )).list();
                 ListResultAdapter adapter = new ListResultAdapter(
                         getActivity(), R.layout.shared_list_item, instructors);
                 listResult.setAdapter(adapter);
             }
         });
 
+        // Fill the from with selected instructor's information.
         listResult.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -147,6 +152,7 @@ public class InstructorFragment extends Fragment {
         });
     }
 
+    // Switch the mode of Add button
     private void switchButtonMode(boolean toUpdateMode) {
         mIsUpdateMode = toUpdateMode;
         if (mIsUpdateMode) {
@@ -156,6 +162,7 @@ public class InstructorFragment extends Fragment {
         }
     }
 
+    // Get the index of a title in the spinner, so that we can select that title.
     private int getTitleIndex(String title) {
         String[] titles = getResources().getStringArray(R.array.array_title);
         int index = -1;
@@ -175,9 +182,9 @@ public class InstructorFragment extends Fragment {
         private Button btnDelete;
         private Button btnShow;
 
-        public ListResultAdapter(@NonNull Context context,
-                                 @LayoutRes int resource,
-                                 @NonNull List<Instructor> objects) {
+        ListResultAdapter(@NonNull Context context,
+                          @LayoutRes int resource,
+                          @NonNull List<Instructor> objects) {
             super(context, resource, objects);
         }
 
@@ -201,11 +208,22 @@ public class InstructorFragment extends Fragment {
             btnDelete.setTag(instructor);
             btnShow.setTag(instructor);
 
+            setEventListener();
+
+            return convertView;
+        }
+
+        private void setEventListener() {
+            // Delete an instructor.
             btnDelete.setOnClickListener(new View.OnClickListener() {
                 Instructor localInstructor;
                 @Override
                 public void onClick(View v) {
+                    // Get the instructor to be deleted.
                     localInstructor = (Instructor) v.getTag();
+
+                    // Check if there is any assigned course of this instructor.
+                    // We won't delete the instructor if he/she has assigned course.
                     CourseDao courseDao = mDaoSession.getCourseDao();
                     long numOfEntry = courseDao.queryBuilder()
                             .where(CourseDao.Properties.InstructorId.eq(localInstructor.getId()))
@@ -231,25 +249,30 @@ public class InstructorFragment extends Fragment {
                     }
                 }
             });
+
+            // Show assigned courses of the instructor
             btnShow.setOnClickListener(new View.OnClickListener() {
                 Instructor localInstructor;
                 @Override
                 public void onClick(View v) {
                     localInstructor = (Instructor) v.getTag();
                     CourseDao courseDao = mDaoSession.getCourseDao();
-                    ListView listView = new ListView(getActivity());
                     List<Course> courses = courseDao.queryBuilder()
                             .where(CourseDao.Properties.InstructorId.eq(localInstructor.getId()))
                             .list();
                     if (courses.size() <= 0) {
                         Toast.makeText(getActivity(), "No course to show", Toast.LENGTH_SHORT).show();
                     } else {
+                        // Extract the course name
                         List<String> courseNameList = new ArrayList<>();
                         for (int i = 0; i < courses.size(); i++) {
                             courseNameList.add(courses.get(i).getName());
                         }
+
+                        // Populate the list and show it
                         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                                 getActivity(), android.R.layout.simple_list_item_1, courseNameList);
+                        ListView listView = new ListView(getActivity());
                         listView.setAdapter(adapter);
                         new AlertDialog.Builder(getActivity())
                                 .setView(listView)
@@ -257,8 +280,6 @@ public class InstructorFragment extends Fragment {
                     }
                 }
             });
-
-            return convertView;
         }
     }
 }
