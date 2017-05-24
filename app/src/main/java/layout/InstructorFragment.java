@@ -107,13 +107,13 @@ public class InstructorFragment extends Fragment {
                     mCurrentInstructor.setName(txtInstructorName.getText().toString());
                     mCurrentInstructor.setTitle(spinnerInstructorTitle.getSelectedItem().toString());
 
-                    InstructorDao studentDao = mDaoSession.getInstructorDao();
+                    InstructorDao instructorDao = mDaoSession.getInstructorDao();
                     String toastMsg;
                     if (mIsUpdateMode) {
-                        studentDao.update(mCurrentInstructor);
+                        instructorDao.update(mCurrentInstructor);
                         toastMsg = "Instructor updated";
                     } else {
-                        studentDao.insert(mCurrentInstructor);
+                        instructorDao.insert(mCurrentInstructor);
                         toastMsg = "Instructor inserted";
                         switchButtonMode(true);
                     }
